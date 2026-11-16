@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>13-Month Custom Calendar & Two-Way Converter</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #222;
+      background-color: #fafafa;
+    }
+    .converters-wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .converter-box {
+      background: #fff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .converter-box h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #1e3a8a;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #444;
+    }
+    input, select, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .row-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    button {
+      margin-top: 16px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .result-box {
+      margin-top: 18px;
+      font-size: 17px;
+      font-weight: bold;
+      padding: 14px;
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      border-radius: 4px;
+      min-height: 24px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .month-card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .month-card h3 {
+      margin: 0 0 10px 0;
+      text-align: center;
+      color: #1e3a8a;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 14px;
+    }
+    th {
+      color: #666;
+      font-weight: 600;
+      padding-bottom: 5px;
+    }
+    td {
+      padding: 6px 0;
+      border-radius: 4px;
+    }
+    .extra-days {
+      grid-column: 1 / -1;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="converters-wrapper">
+    <!-- BOX 1: Gregorian to 13-Month -->
+    <div class="converter-box">
+      <h2>Gregorian &rarr; 13-Month</h2>
+      <label for="gregDate">Select a Gregorian Date:</label>
+      <input type="date" id="gregDate">
+      <button onclick="convertToCustom()">Convert to 13-Month</button>
+      <div class="result-box" id="resultToCustom">Pick a date above to see the result.</div>
+    </div>
+
+    <!-- BOX 2: 13-Month to Gregorian -->
+    <div class="converter-box">
+      <h2>13-Month &rarr; Gregorian</h2>
+      <label for="customMonth">Month or Extra Day:</label>
+      <select id="customMonth" onchange="toggleDayInput()">
+        <option value="0">1. January</option>
+        <option value="1">2. February</option>
+        <option value="2">3. March</option>
+        <option value="3">4. April</option>
+        <option value="4">5. May</option>
+        <option value="5">6. June</option>
+        <option value="6">7. Jupiltry</option>
+        <option value="7">8. Menerca</option>
+        <option value="8">9. Cerenber</option>
+        <option value="9">10. Venecter</option>
+        <option value="10">11. Dianember</option>
+        <option value="11">12. Satercember</option>
+        <option value="12">13. Bachille</option>
+        <option value="365">Year Day (End of Year)</option>
+        <option value="366">Leap Day (End of Leap Year)</option>
+      </select>
+
+      <div class="row-inputs">
+        <div>
+          <label for="customDay">Day (1–28):</label>
+          <input type="number" id="customDay" min="1" max="28" value="1">
+        </div>
+        <div>
+          <label for="customYear">Year:</label>
+          <input type="number" id="customYear" value="2026">
+        </div>
+      </div>
+
+      <button onclick="convertToGregorian()">Convert to Gregorian</button>
+      <div class="result-box" id="resultToGreg">Choose a date above to see the result.</div>
+    </div>
+  </div>
+
+  <h2 style="text-align: center; margin-bottom: 20px;">Standard 13-Month Calendar Layout</h2>
+  <div class="calendar-grid" id="calendarGrid"></div>
+
+  <script>
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "Jupiltry", "Menerca", "Cerenber", "Venecter",
+      "Dianember", "Satercember", "Bachille"
+    ];
+
+    const gregMonthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    function isLeapYear(year) {
+      return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    }
+
+    // 1. Gregorian -> 13-Month (UTC-safe)
+    function convertToCustom() {
+      const input = document.getElementById('gregDate').value;
+      if (!input) return;
+
+      const [year, month, day] = input.split('-').map(Number);
+      const selectedUTC = Date.UTC(year, month - 1, day);
+      const startOfYearUTC = Date.UTC(year, 0, 1);
+
+      const dayOfYear = Math.round((selectedUTC - startOfYearUTC) / 86400000) + 1;
+
+      let output = "";
+      if (dayOfYear === 365) {
+        output = `Year Day (Day 365), ${year}`;
+      } else if (dayOfYear === 366) {
+        output = `Leap Day (Day 366), ${year}`;
+      } else {
+        const monthIndex = Math.floor((dayOfYear - 1) / 28);
+        const customDay = ((dayOfYear - 1) % 28) + 1;
+        output = `${months[monthIndex]} ${customDay}, ${year}`;
+      }
+
+      document.getElementById('resultToCustom').innerText = output;
+    }
+
+    // Disable day input when Year Day or Leap Day is chosen
+    function toggleDayInput() {
+      const monthVal = document.getElementById('customMonth').value;
+      const dayInput = document.getElementById('customDay');
+      dayInput.disabled = (monthVal === "365" || monthVal === "366");
+    }
+
+    // 2. 13-Month -> Gregorian (UTC-safe)
+    function convertToGregorian() {
+      const monthVal = Number(document.getElementById('customMonth').value);
+      const dayVal = Number(document.getElementById('customDay').value);
+      const yearVal = Number(document.getElementById('customYear').value);
+      const resultBox = document.getElementById('resultToGreg');
+
+      if (!yearVal || yearVal < 1) {
+        resultBox.innerText = "Please enter a valid year (1 or higher).";
+        return;
+      }
+
+      let dayOfYear;
+      if (monthVal === 365) {
+        dayOfYear = 365;
+      } else if (monthVal === 366) {
+        if (!isLeapYear(yearVal)) {
+          resultBox.innerText = `${yearVal} is not a leap year, so it has no Leap Day.`;
+          return;
+        }
+        dayOfYear = 366;
+      } else {
+        if (dayVal < 1 || dayVal > 28 || !Number.isInteger(dayVal)) {
+          resultBox.innerText = "Please enter a day between 1 and 28.";
+          return;
+        }
+        dayOfYear = (monthVal * 28) + dayVal;
+      }
+
+      // Add (dayOfYear - 1) days to Jan 1 in UTC
+      const resultDate = new Date(Date.UTC(yearVal, 0, 1 + (dayOfYear - 1)));
+      const gMonth = gregMonthNames[resultDate.getUTCMonth()];
+      const gDay = resultDate.getUTCDate();
+      const gYear = resultDate.getUTCFullYear();
+
+      resultBox.innerText = `${gMonth} ${gDay}, ${gYear}`;
+    }
+
+    // Generate the visual 13-month calendar grid
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      months.forEach((monthName, index) => {
+        const card = document.createElement('div');
+        card.className = 'month-card';
+
+        let tableHTML = `<h3>${index + 1}. ${monthName}</h3><table><thead><tr>`;
+        daysOfWeek.forEach(d => tableHTML += `<th>${d}</th>`);
+        tableHTML += `</tr></thead><tbody>`;
+
+        let dayCounter = 1;
+        for (let row = 0; row < 4; row++) {
+          tableHTML += `<tr>`;
+          for (let col = 0; col < 7; col++) {
+            tableHTML += `<td>${dayCounter}</td>`;
+            dayCounter++;
+          }
+          tableHTML += `</tr>`;
+        }
+        tableHTML += `</tbody></table>`;
+        card.innerHTML = tableHTML;
+        grid.appendChild(card);
+      });
+
+      const extraCard = document.createElement('div');
+      extraCard.className = 'extra-days';
+      extraCard.innerHTML = `End of Year (After Bachille 28): Day 365 (Year Day) &bull; Day 366 (Leap Day — every 4 years, except centuries not divisible by 400)`;
+      grid.appendChild(extraCard);
+    }
+
+    renderCalendar();
+  </script>
+</body>
+</html>
